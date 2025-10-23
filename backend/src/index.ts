@@ -28,16 +28,33 @@ async function initializeDatabase() {
     await prisma.$connect();
     console.log('✅ Database connected successfully');
     
-    // First, run migrations to create tables
-    console.log('🔄 Running database migrations...');
+    // First, generate Prisma client and run migrations
+    console.log('🔄 Generating Prisma client...');
     const { execSync } = require('child_process');
     
+    try {
+      execSync('npx prisma generate', { stdio: 'inherit' });
+      console.log('✅ Prisma client generated');
+    } catch (error) {
+      console.error('❌ Error generating Prisma client:', error);
+      throw error;
+    }
+    
+    console.log('🔄 Running database migrations...');
     try {
       execSync('npx prisma migrate deploy', { stdio: 'inherit' });
       console.log('✅ Database migrations completed');
     } catch (error) {
       console.error('❌ Error running migrations:', error);
-      throw error;
+      // Try to create tables directly if migration fails
+      console.log('🔄 Trying to create tables directly...');
+      try {
+        execSync('npx prisma db push', { stdio: 'inherit' });
+        console.log('✅ Database tables created');
+      } catch (pushError) {
+        console.error('❌ Error creating tables:', pushError);
+        throw pushError;
+      }
     }
     
     // Then check if we need to seed
