@@ -18,6 +18,49 @@ import reportRoutes from './routes/reports';
 // Load environment variables
 dotenv.config();
 
+// Initialize database
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+// Test database connection and initialize if needed
+async function initializeDatabase() {
+  try {
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+    
+    // First, run migrations to create tables
+    console.log('🔄 Running database migrations...');
+    const { exec } = require('child_process');
+    
+    exec('npx prisma migrate deploy', (error: any, stdout: any, stderr: any) => {
+      if (error) {
+        console.error('❌ Error running migrations:', error);
+        return;
+      }
+      console.log('✅ Database migrations completed');
+      
+      // Then check if we need to seed
+      prisma.user.count().then((userCount) => {
+        if (userCount === 0) {
+          console.log('🔄 No users found, seeding database...');
+          exec('node scripts/seed.js', (seedError: any, seedStdout: any, seedStderr: any) => {
+            if (seedError) {
+              console.error('❌ Error seeding database:', seedError);
+            } else {
+              console.log('✅ Database seeded successfully');
+            }
+          });
+        } else {
+          console.log(`✅ Database already has ${userCount} users`);
+        }
+      });
+    });
+    
+  } catch (error) {
+    console.error('❌ Database connection failed:', error);
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 5100;
 
@@ -65,16 +108,54 @@ app.use('/api/reports', reportRoutes);
 
 // Serve static files from React build
 if (process.env.NODE_ENV === 'production') {
-  const buildPath = path.join(__dirname, '../../frontend/build');
-  console.log('Serving static files from:', buildPath);
+  // Try multiple possible paths for the frontend build
+  const possiblePaths = [
+    path.join(__dirname, '../../frontend/build'),
+    path.join(__dirname, '../frontend/build'),
+    path.join(process.cwd(), 'frontend/build'),
+    path.join(process.cwd(), '../frontend/build')
+  ];
   
-  app.use(express.static(buildPath));
+  let buildPath = null;
+  for (const testPath of possiblePaths) {
+    try {
+      if (require('fs').existsSync(path.join(testPath, 'index.html'))) {
+        buildPath = testPath;
+        break;
+      }
+    } catch (e) {
+      // Continue to next path
+    }
+  }
   
-  // Handle React routing, return all requests to React app
-  app.get('*', (req, res) => {
-    console.log('Serving React app for route:', req.path);
-    res.sendFile(path.join(buildPath, 'index.html'));
-  });
+  if (!buildPath) {
+    console.error('Frontend build not found in any expected location');
+    console.error('Searched paths:', possiblePaths);
+    console.error('Current working directory:', process.cwd());
+    console.error('__dirname:', __dirname);
+  } else {
+    console.log('Serving static files from:', buildPath);
+  }
+  
+  if (buildPath) {
+    app.use(express.static(buildPath));
+    
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+      console.log('Serving React app for route:', req.path);
+      res.sendFile(path.join(buildPath, 'index.html'));
+    });
+  } else {
+    // Fallback if frontend build not found
+    app.get('*', (req, res) => {
+      res.status(500).json({ 
+        error: 'Frontend build not found. Please check deployment logs.',
+        searchedPaths: possiblePaths,
+        currentDir: process.cwd(),
+        __dirname: __dirname
+      });
+    });
+  }
 } else {
   // 404 handler for development
   app.use('*', (req, res) => {
@@ -101,11 +182,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔗 API base URL: http://localhost:${PORT}/api`);
+// Initialize database and start server
+initializeDatabase().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/health`);
+    console.log(`🔗 API base URL: http://localhost:${PORT}/api`);
+  });
 });
 
 export default app;
