@@ -7,7 +7,8 @@
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "server": "cd backend && npm run dev",
     "client": "cd frontend && npm start",
-    "build": "cd frontend && npm run build",
+    "build": "cd frontend && npm run build && cd ../backend && npm run build",
+    "start:prod": "cd backend && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
   "keywords": ["360-feedback", "performance-review", "hr-management"],
