@@ -18,62 +18,9 @@ import reportRoutes from './routes/reports';
 // Load environment variables
 dotenv.config();
 
-// Initialize database
+// Import Prisma client
 import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-
-// Test database connection and initialize if needed
-async function initializeDatabase() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Database connected successfully');
-    
-    // First, generate Prisma client and run migrations
-    console.log('🔄 Generating Prisma client...');
-    const { execSync } = require('child_process');
-    
-    try {
-      execSync('npx prisma generate', { stdio: 'inherit' });
-      console.log('✅ Prisma client generated');
-    } catch (error) {
-      console.error('❌ Error generating Prisma client:', error);
-      throw error;
-    }
-    
-    console.log('🔄 Creating database tables...');
-    try {
-      execSync('npx prisma db push --force-reset', { stdio: 'inherit' });
-      console.log('✅ Database tables created successfully');
-    } catch (error) {
-      console.error('❌ Error creating tables:', error);
-      throw error;
-    }
-    
-    // Then check if we need to seed
-    try {
-      const userCount = await prisma.user.count();
-      if (userCount === 0) {
-        console.log('🔄 No users found, seeding database...');
-        try {
-          execSync('node scripts/seed.js', { stdio: 'inherit' });
-          console.log('✅ Database seeded successfully');
-        } catch (seedError) {
-          console.error('❌ Error seeding database:', seedError);
-          throw seedError;
-        }
-      } else {
-        console.log(`✅ Database already has ${userCount} users`);
-      }
-    } catch (error) {
-      console.error('❌ Error checking/seeding database:', error);
-      throw error;
-    }
-    
-  } catch (error) {
-    console.error('❌ Database initialization failed:', error);
-    throw error;
-  }
-}
 
 const app = express();
 const PORT = process.env.PORT || 5100;
@@ -196,13 +143,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   });
 });
 
-// Initialize database and start server
-initializeDatabase().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/health`);
-    console.log(`🔗 API base URL: http://localhost:${PORT}/api`);
-  });
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔗 API base URL: http://localhost:${PORT}/api`);
 });
 
 export default app;
