@@ -11,9 +11,9 @@ echo "📦 Installing Node.js 18.x..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
 apt-get install -y nodejs
 
-# Install PM2 globally for process management
-echo "📦 Installing PM2..."
-npm install -g pm2
+# Install PM2 and serve globally for process management
+echo "📦 Installing PM2 and serve..."
+npm install -g pm2 serve
 
 # Install Git if not already installed
 echo "📦 Installing Git..."
@@ -66,7 +66,7 @@ echo "⚙️ Creating PM2 configuration..."
 cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [{
-    name: '360-feedback-app',
+    name: '360-feedback-backend',
     script: 'backend/dist/index.js',
     cwd: '/opt/360-feedback-app',
     instances: 1,
@@ -75,8 +75,17 @@ module.exports = {
     max_memory_restart: '1G',
     env: {
       NODE_ENV: 'production',
-      PORT: 3000
+      PORT: 5100
     }
+  }, {
+    name: '360-feedback-frontend',
+    script: 'serve',
+    args: '-s frontend/build -l 5200',
+    cwd: '/opt/360-feedback-app',
+    instances: 1,
+    autorestart: true,
+    watch: false,
+    max_memory_restart: '1G'
   }]
 };
 EOF
@@ -95,7 +104,9 @@ echo "✅ Deployment complete!"
 echo ""
 echo "🎉 Your 360-Degree Feedback Application is now running!"
 echo ""
-echo "Application URL: http://202.10.47.41:3000"
+echo "Application URLs:"
+echo "  Frontend: http://202.10.47.41:5200"
+echo "  Backend API: http://202.10.47.41:5100"
 echo ""
 echo "Default login credentials:"
 echo "  Admin: admin@company.com / admin123"
@@ -103,9 +114,10 @@ echo "  Employee: jane@company.com / employee123"
 echo "  Employee: bob@company.com / employee123"
 echo ""
 echo "PM2 Commands:"
-echo "  pm2 status          - Check app status"
-echo "  pm2 logs            - View logs"
-echo "  pm2 restart 360-feedback-app - Restart app"
-echo "  pm2 stop 360-feedback-app    - Stop app"
+echo "  pm2 status                    - Check app status"
+echo "  pm2 logs                      - View logs"
+echo "  pm2 restart 360-feedback-backend  - Restart backend"
+echo "  pm2 restart 360-feedback-frontend - Restart frontend"
+echo "  pm2 stop all                  - Stop all apps"
 echo ""
 echo "Happy coding! 🚀"
