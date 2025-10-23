@@ -30,34 +30,39 @@ async function initializeDatabase() {
     
     // First, run migrations to create tables
     console.log('🔄 Running database migrations...');
-    const { exec } = require('child_process');
+    const { execSync } = require('child_process');
     
-    exec('npx prisma migrate deploy', (error: any, stdout: any, stderr: any) => {
-      if (error) {
-        console.error('❌ Error running migrations:', error);
-        return;
-      }
+    try {
+      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
       console.log('✅ Database migrations completed');
-      
-      // Then check if we need to seed
-      prisma.user.count().then((userCount) => {
-        if (userCount === 0) {
-          console.log('🔄 No users found, seeding database...');
-          exec('node scripts/seed.js', (seedError: any, seedStdout: any, seedStderr: any) => {
-            if (seedError) {
-              console.error('❌ Error seeding database:', seedError);
-            } else {
-              console.log('✅ Database seeded successfully');
-            }
-          });
-        } else {
-          console.log(`✅ Database already has ${userCount} users`);
+    } catch (error) {
+      console.error('❌ Error running migrations:', error);
+      throw error;
+    }
+    
+    // Then check if we need to seed
+    try {
+      const userCount = await prisma.user.count();
+      if (userCount === 0) {
+        console.log('🔄 No users found, seeding database...');
+        try {
+          execSync('node scripts/seed.js', { stdio: 'inherit' });
+          console.log('✅ Database seeded successfully');
+        } catch (seedError) {
+          console.error('❌ Error seeding database:', seedError);
+          throw seedError;
         }
-      });
-    });
+      } else {
+        console.log(`✅ Database already has ${userCount} users`);
+      }
+    } catch (error) {
+      console.error('❌ Error checking/seeding database:', error);
+      throw error;
+    }
     
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    console.error('❌ Database initialization failed:', error);
+    throw error;
   }
 }
 
