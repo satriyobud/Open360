@@ -40,21 +40,13 @@ async function initializeDatabase() {
       throw error;
     }
     
-    console.log('🔄 Running database migrations...');
+    console.log('🔄 Creating database tables...');
     try {
-      execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-      console.log('✅ Database migrations completed');
+      execSync('npx prisma db push --force-reset', { stdio: 'inherit' });
+      console.log('✅ Database tables created successfully');
     } catch (error) {
-      console.error('❌ Error running migrations:', error);
-      // Try to create tables directly if migration fails
-      console.log('🔄 Trying to create tables directly...');
-      try {
-        execSync('npx prisma db push', { stdio: 'inherit' });
-        console.log('✅ Database tables created');
-      } catch (pushError) {
-        console.error('❌ Error creating tables:', pushError);
-        throw pushError;
-      }
+      console.error('❌ Error creating tables:', error);
+      throw error;
     }
     
     // Then check if we need to seed
