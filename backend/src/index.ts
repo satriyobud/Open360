@@ -63,18 +63,22 @@ app.use('/api/assignments', assignmentRoutes);
 app.use('/api/feedbacks', feedbackRoutes);
 app.use('/api/reports', reportRoutes);
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
 // Serve static files from React build
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../../frontend/build')));
+  const buildPath = path.join(__dirname, '../frontend/build');
+  console.log('Serving static files from:', buildPath);
+  
+  app.use(express.static(buildPath));
   
   // Handle React routing, return all requests to React app
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../../frontend/build', 'index.html'));
+    console.log('Serving React app for route:', req.path);
+    res.sendFile(path.join(buildPath, 'index.html'));
+  });
+} else {
+  // 404 handler for development
+  app.use('*', (req, res) => {
+    res.status(404).json({ error: 'Route not found' });
   });
 }
 
