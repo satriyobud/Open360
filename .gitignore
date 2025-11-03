@@ -76,6 +76,7 @@ Thumbs.db
 # Prisma
 /backend/prisma/migrations/
 
-# Documentation files (exclude all .md except README.md)
+# Documentation files (exclude all .md except README.md and docs/)
 *.md
 !README.md
+!docs/*.md
