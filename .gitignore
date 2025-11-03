@@ -80,3 +80,4 @@ Thumbs.db
 *.md
 !README.md
 !docs/*.md
+wiki/
