@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Setting up 360-Degree Feedback Application..."
+echo "🚀 Setting up Open360..."
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
@@ -14,6 +14,12 @@ if ! command -v npm &> /dev/null; then
     exit 1
 fi
 
+# Check if MySQL is installed
+if ! command -v mysql &> /dev/null; then
+    echo "⚠️  MySQL client not found. Please ensure MySQL is installed."
+    echo "   You can still continue, but you'll need to create the database manually."
+fi
+
 echo "✅ Node.js and npm are installed"
 
 # Install root dependencies
@@ -25,17 +31,12 @@ echo "📦 Installing backend dependencies..."
 cd backend
 npm install
 
-# Generate Prisma client
-echo "🔧 Generating Prisma client..."
-npx prisma generate
-
-# Run database migrations
-echo "🗄️ Setting up database..."
-npx prisma migrate dev --name init
-
-# Seed the database
-echo "🌱 Seeding database with sample data..."
-node scripts/seed.js
+# Setup environment file if it doesn't exist
+if [ ! -f .env ]; then
+    echo "📝 Creating .env file from example..."
+    cp .env.example .env
+    echo "⚠️  Please edit backend/.env with your database credentials"
+fi
 
 # Install frontend dependencies
 echo "📦 Installing frontend dependencies..."
@@ -47,7 +48,12 @@ cd ..
 
 echo "✅ Setup complete!"
 echo ""
-echo "🎉 Your 360-Degree Feedback Application is ready!"
+echo "🎉 Open360 is ready!"
+echo ""
+echo "⚠️  IMPORTANT: Before starting, make sure to:"
+echo "   1. Create MySQL database: CREATE DATABASE 360_feedback;"
+echo "   2. Configure backend/.env with your database credentials"
+echo "   3. Run: cd backend && node scripts/seed.js (to seed initial data)"
 echo ""
 echo "To start the application:"
 echo "  npm run dev"
@@ -58,6 +64,5 @@ echo "  - Frontend App: http://localhost:5200"
 echo ""
 echo "Default login credentials:"
 echo "  Admin: admin@company.com / admin123"
-echo "  Employee: employee@company.com / employee123"
 echo ""
 echo "Happy coding! 🚀"

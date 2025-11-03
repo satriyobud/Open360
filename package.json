@@ -1,7 +1,7 @@
 {
-  "name": "360-feedback-app",
+  "name": "open360",
   "version": "1.0.0",
-  "description": "360-Degree Feedback Web Application",
+  "description": "Open360 - Open-source 360-Degree Feedback System",
   "main": "index.js",
   "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
@@ -11,7 +11,7 @@
     "start:prod": "cd backend && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install"
   },
-  "keywords": ["360-feedback", "performance-review", "hr-management"],
+  "keywords": ["open360", "360-feedback", "performance-review", "hr-management", "open-source"],
   "author": "Your Name",
   "license": "MIT",
   "devDependencies": {

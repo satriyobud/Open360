@@ -85,7 +85,7 @@ const Login: React.FC = () => {
             >
               <LoginIcon sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
               <Typography component="h1" variant="h4" gutterBottom>
-                360° Feedback
+                Open360
               </Typography>
               <Typography variant="body2" color="text.secondary" align="center">
                 Sign in to access your performance review dashboard

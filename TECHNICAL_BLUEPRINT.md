@@ -1,4 +1,4 @@
-# 📘 Technical Blueprint - 360° Feedback System
+# 📘 Technical Blueprint - Open360
 
 ## 📋 Table of Contents
 1. [Overview](#overview)
@@ -13,7 +13,7 @@
 
 ## 🎯 Overview
 
-The 360° Feedback System is a comprehensive performance review application that enables organizations to collect multi-source feedback (self, manager, subordinate, and peer reviews). The system automates assignment creation, tracks completion, and provides detailed analytics for performance improvement.
+**Open360** is an open-source comprehensive performance review application that enables organizations to collect multi-source feedback (self, manager, subordinate, and peer reviews). The system automates assignment creation, tracks completion, and provides detailed analytics for performance improvement.
 
 ### Key Capabilities
 - **Configurable Auto-Assignment**: Admin selects review types (Self, Manager, Subordinate, Peer) when starting a review cycle

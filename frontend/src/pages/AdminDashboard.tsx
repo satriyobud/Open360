@@ -87,7 +87,7 @@ const AdminDashboard: React.FC = () => {
     <div>
       <Toolbar>
         <Typography variant="h6" noWrap component="div">
-          360° Admin
+          Open360
         </Typography>
       </Toolbar>
       <Divider />

@@ -1,7 +1,7 @@
 {
-  "name": "360-feedback-frontend",
+  "name": "open360-frontend",
   "version": "1.0.0",
-  "description": "Frontend for 360-Degree Feedback Application",
+  "description": "Frontend for Open360",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.11.1",

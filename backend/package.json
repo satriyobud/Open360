@@ -1,7 +1,7 @@
 {
-  "name": "360-feedback-backend",
+  "name": "open360-backend",
   "version": "1.0.0",
-  "description": "Backend API for 360-Degree Feedback Application",
+  "description": "Backend API for Open360",
   "main": "dist/index.js",
   "scripts": {
     "dev": "PORT=5100 nodemon src/index.ts",
