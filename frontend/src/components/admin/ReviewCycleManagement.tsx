@@ -10,7 +10,10 @@ import {
   TextField,
   IconButton,
   Chip,
-  Alert
+  Alert,
+  FormControlLabel,
+  Checkbox,
+  Divider
 } from '@mui/material';
 import {
   Add,
@@ -40,7 +43,13 @@ const ReviewCycleManagement: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     startDate: null as Date | null,
-    endDate: null as Date | null
+    endDate: null as Date | null,
+    config: {
+      self: true,
+      manager: true,
+      subordinate: true,
+      peer: true
+    }
   });
 
   const queryClient = useQueryClient();
@@ -53,9 +62,10 @@ const ReviewCycleManagement: React.FC = () => {
   const createMutation = useMutation(
     (data: any) => api.post('/review-cycles', data),
     {
-      onSuccess: () => {
+      onSuccess: (response: any) => {
         queryClient.invalidateQueries('review-cycles');
-        toast.success('Review cycle created successfully');
+        const assignmentsCount = response.data?.assignments_created || 0;
+        toast.success(`Review cycle created successfully! ${assignmentsCount} assignments created.`);
         handleClose();
       },
       onError: (error: any) => {
@@ -97,14 +107,26 @@ const ReviewCycleManagement: React.FC = () => {
       setFormData({
         name: cycle.name,
         startDate: new Date(cycle.startDate),
-        endDate: new Date(cycle.endDate)
+        endDate: new Date(cycle.endDate),
+        config: (cycle as any).assignmentConfig || {
+          self: true,
+          manager: true,
+          subordinate: true,
+          peer: true
+        }
       });
     } else {
       setEditingCycle(null);
       setFormData({
         name: '',
         startDate: null,
-        endDate: null
+        endDate: null,
+        config: {
+          self: true,
+          manager: true,
+          subordinate: true,
+          peer: true
+        }
       });
     }
     setOpen(true);
@@ -116,7 +138,13 @@ const ReviewCycleManagement: React.FC = () => {
     setFormData({
       name: '',
       startDate: null,
-      endDate: null
+      endDate: null,
+      config: {
+        self: true,
+        manager: true,
+        subordinate: true,
+        peer: true
+      }
     });
   };
 
@@ -133,10 +161,17 @@ const ReviewCycleManagement: React.FC = () => {
       return;
     }
 
+    // Validate at least one review type is selected
+    if (!formData.config.self && !formData.config.manager && !formData.config.subordinate && !formData.config.peer) {
+      toast.error('Please select at least one review type');
+      return;
+    }
+
     const submitData = {
       name: formData.name,
       startDate: formData.startDate.toISOString(),
-      endDate: formData.endDate.toISOString()
+      endDate: formData.endDate.toISOString(),
+      config: formData.config
     };
 
     if (!editingCycle) {
@@ -263,7 +298,7 @@ const ReviewCycleManagement: React.FC = () => {
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
-          {editingCycle ? 'Edit Review Cycle' : 'Add New Review Cycle'}
+          {editingCycle ? 'Edit Review Cycle' : 'Start New Review Cycle'}
         </DialogTitle>
         <form onSubmit={handleSubmit}>
           <DialogContent>
@@ -295,6 +330,66 @@ const ReviewCycleManagement: React.FC = () => {
                 />
               </Box>
             </LocalizationProvider>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Typography variant="subtitle2" gutterBottom sx={{ mb: 1, fontWeight: 'bold' }}>
+              Select Review Types to Auto-Assign:
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+              Choose which types of reviews should be automatically created for each employee
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.config.self}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      config: { ...formData.config, self: e.target.checked }
+                    })}
+                  />
+                }
+                label="Self-review (Employees review themselves)"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.config.manager}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      config: { ...formData.config, manager: e.target.checked }
+                    })}
+                  />
+                }
+                label="Manager review (Managers review their subordinates)"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.config.subordinate}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      config: { ...formData.config, subordinate: e.target.checked }
+                    })}
+                  />
+                }
+                label="Subordinate reviews (Subordinates review their managers)"
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={formData.config.peer}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      config: { ...formData.config, peer: e.target.checked }
+                    })}
+                  />
+                }
+                label="Peer reviews (Colleagues with the same manager review each other)"
+              />
+            </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose}>Cancel</Button>
@@ -303,7 +398,7 @@ const ReviewCycleManagement: React.FC = () => {
               variant="contained"
               disabled={createMutation.isLoading || updateMutation.isLoading}
             >
-              {editingCycle ? 'Update' : 'Create'}
+              {editingCycle ? 'Update' : 'Start Cycle'}
             </Button>
           </DialogActions>
         </form>

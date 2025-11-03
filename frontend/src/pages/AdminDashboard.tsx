@@ -41,6 +41,8 @@ import QuestionManagement from '../components/admin/QuestionManagement.tsx';
 import AssignmentManagement from '../components/admin/AssignmentManagement.tsx';
 import FeedbackManagement from '../components/admin/FeedbackManagement.tsx';
 import ReportsDashboard from '../components/admin/ReportsDashboard.tsx';
+import DepartmentsManagement from '../components/admin/DepartmentsManagement.tsx';
+import FeedbackSummaries from '../components/admin/FeedbackSummaries.tsx';
 
 const drawerWidth = 240;
 
@@ -54,12 +56,14 @@ const AdminDashboard: React.FC = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/admin' },
     { text: 'Employees', icon: <People />, path: '/admin/employees' },
+    { text: 'Departments', icon: <People />, path: '/admin/departments' },
     { text: 'Review Cycles', icon: <Assessment />, path: '/admin/review-cycles' },
     { text: 'Categories', icon: <Category />, path: '/admin/categories' },
     { text: 'Questions', icon: <Quiz />, path: '/admin/questions' },
     { text: 'Assignments', icon: <Assignment />, path: '/admin/assignments' },
     { text: 'Feedbacks', icon: <Feedback />, path: '/admin/feedbacks' },
     { text: 'Reports', icon: <BarChart />, path: '/admin/reports' },
+    { text: 'Summaries', icon: <Assessment />, path: '/admin/summaries' },
   ];
 
   const handleDrawerToggle = () => {
@@ -210,12 +214,14 @@ const AdminDashboard: React.FC = () => {
         <Routes>
           <Route path="/" element={<DashboardOverview />} />
           <Route path="/employees" element={<EmployeeManagement />} />
+          <Route path="/departments" element={<DepartmentsManagement />} />
           <Route path="/review-cycles" element={<ReviewCycleManagement />} />
           <Route path="/categories" element={<CategoryManagement />} />
           <Route path="/questions" element={<QuestionManagement />} />
           <Route path="/assignments" element={<AssignmentManagement />} />
           <Route path="/feedbacks" element={<FeedbackManagement />} />
           <Route path="/reports" element={<ReportsDashboard />} />
+          <Route path="/summaries" element={<FeedbackSummaries />} />
         </Routes>
       </Box>
     </Box>

@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import prisma from '../config/database';
+import { query } from '../config/database';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -24,11 +24,12 @@ router.post('/register', [
     const { name, email, password, role, managerId } = req.body;
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
+    const existingUsers = await query(
+      'SELECT id FROM users WHERE email = ?',
+      [email]
+    ) as any[];
 
-    if (existingUser) {
+    if (existingUsers.length > 0) {
       return res.status(400).json({ error: 'User already exists' });
     }
 
@@ -36,23 +37,22 @@ router.post('/register', [
     const passwordHash = await bcrypt.hash(password, 10);
 
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        passwordHash,
-        role,
-        managerId: managerId || null
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        managerId: true,
-        createdAt: true
-      }
-    });
+    const result = await query(
+      `INSERT INTO users (name, email, password_hash, role, manager_id, created_at, updated_at) 
+       VALUES (?, ?, ?, ?, ?, NOW(), NOW())`,
+      [name, email, passwordHash, role, managerId || null]
+    ) as any;
+
+    const userId = result.insertId;
+
+    // Fetch created user
+    const users = await query(
+      `SELECT id, name, email, role, manager_id, created_at 
+       FROM users WHERE id = ?`,
+      [userId]
+    ) as any[];
+
+    const user = users[0];
 
     res.status(201).json({ message: 'User created successfully', user });
   } catch (error) {
@@ -74,22 +74,24 @@ router.post('/login', [
 
     const { email, password } = req.body;
 
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        manager: {
-          select: { id: true, name: true, email: true }
-        }
-      }
-    });
+    // Find user with manager info
+    const users = await query(
+      `SELECT u.id, u.name, u.email, u.password_hash, u.role, u.manager_id,
+              m.id as manager_id_full, m.name as manager_name, m.email as manager_email
+       FROM users u
+       LEFT JOIN users m ON u.manager_id = m.id
+       WHERE u.email = ?`,
+      [email]
+    ) as any[];
 
-    if (!user) {
+    if (users.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    const user = users[0];
+
     // Check password
-    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -109,7 +111,11 @@ router.post('/login', [
         name: user.name,
         email: user.email,
         role: user.role,
-        manager: user.manager
+        manager: user.manager_id_full ? {
+          id: user.manager_id_full,
+          name: user.manager_name,
+          email: user.manager_email
+        } : null
       }
     });
   } catch (error) {
@@ -121,29 +127,39 @@ router.post('/login', [
 // Get current user
 router.get('/me', authenticateToken, async (req: any, res: any) => {
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      include: {
-        manager: {
-          select: { id: true, name: true, email: true }
-        },
-        subordinates: {
-          select: { id: true, name: true, email: true }
-        }
-      }
-    });
+    // Get user with manager
+    const users = await query(
+      `SELECT u.id, u.name, u.email, u.role, u.manager_id,
+              m.id as manager_id_full, m.name as manager_name, m.email as manager_email
+       FROM users u
+       LEFT JOIN users m ON u.manager_id = m.id
+       WHERE u.id = ?`,
+      [req.user.id]
+    ) as any[];
 
-    if (!user) {
+    if (users.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
+
+    const user = users[0];
+
+    // Get subordinates
+    const subordinates = await query(
+      `SELECT id, name, email FROM users WHERE manager_id = ?`,
+      [req.user.id]
+    ) as any[];
 
     res.json({
       id: user.id,
       name: user.name,
       email: user.email,
       role: user.role,
-      manager: user.manager,
-      subordinates: user.subordinates
+      manager: user.manager_id_full ? {
+        id: user.manager_id_full,
+        name: user.manager_name,
+        email: user.manager_email
+      } : null,
+      subordinates: subordinates
     });
   } catch (error) {
     console.error('Get user error:', error);
@@ -152,4 +168,3 @@ router.get('/me', authenticateToken, async (req: any, res: any) => {
 });
 
 export default router;
-

@@ -36,11 +36,15 @@ interface Employee {
     id: number;
     name: string;
   };
+  department?: {
+    id: number;
+    name: string;
+  };
   subordinates: Array<{
     id: number;
     name: string;
   }>;
-  createdAt: string;
+  created_at?: string;
 }
 
 const EmployeeManagement: React.FC = () => {
@@ -50,7 +54,8 @@ const EmployeeManagement: React.FC = () => {
     name: '',
     email: '',
     password: '',
-    managerId: ''
+    managerId: '',
+    departmentId: ''
   });
 
   const queryClient = useQueryClient();
@@ -63,6 +68,11 @@ const EmployeeManagement: React.FC = () => {
   const { data: managers } = useQuery('managers', async () => {
     const response = await api.get('/employees');
     return response.data.filter((emp: Employee) => emp.role === 'EMPLOYEE');
+  });
+
+  const { data: departments } = useQuery('departments', async () => {
+    const res = await api.get('/departments');
+    return res.data;
   });
 
   const createMutation = useMutation(
@@ -113,7 +123,8 @@ const EmployeeManagement: React.FC = () => {
         name: employee.name,
         email: employee.email,
         password: '',
-        managerId: employee.manager?.id?.toString() || ''
+        managerId: employee.manager?.id?.toString() || '',
+        departmentId: employee.department?.id?.toString() || ''
       });
     } else {
       setEditingEmployee(null);
@@ -121,7 +132,8 @@ const EmployeeManagement: React.FC = () => {
         name: '',
         email: '',
         password: '',
-        managerId: ''
+        managerId: '',
+        departmentId: ''
       });
     }
     setOpen(true);
@@ -134,7 +146,8 @@ const EmployeeManagement: React.FC = () => {
       name: '',
       email: '',
       password: '',
-      managerId: ''
+      managerId: '',
+      departmentId: ''
     });
   };
 
@@ -144,7 +157,8 @@ const EmployeeManagement: React.FC = () => {
     const submitData = {
       name: formData.name,
       email: formData.email,
-      managerId: formData.managerId ? parseInt(formData.managerId) : null
+      managerId: formData.managerId ? parseInt(formData.managerId) : null,
+      departmentId: formData.departmentId ? parseInt(formData.departmentId) : null
     };
 
     if (!editingEmployee) {
@@ -172,6 +186,12 @@ const EmployeeManagement: React.FC = () => {
       renderCell: (params) => params.value?.name || 'No Manager'
     },
     {
+      field: 'department',
+      headerName: 'Department',
+      width: 200,
+      renderCell: (params) => params.value?.name || '—'
+    },
+    {
       field: 'subordinates',
       headerName: 'Subordinates',
       width: 150,
@@ -184,10 +204,16 @@ const EmployeeManagement: React.FC = () => {
       )
     },
     {
-      field: 'createdAt',
+      field: 'created_at',
       headerName: 'Created',
       width: 120,
-      renderCell: (params) => new Date(params.value).toLocaleDateString()
+      valueGetter: (params) => params.row.created_at || params.row.createdAt,
+      renderCell: (params) => {
+        const v = params.value;
+        if (!v) return '-';
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? '-' : d.toLocaleDateString();
+      }
     },
     {
       field: 'actions',
@@ -312,6 +338,23 @@ const EmployeeManagement: React.FC = () => {
                 {managers?.map((manager: Employee) => (
                   <MenuItem key={manager.id} value={manager.id}>
                     {manager.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth sx={{ mb: 2 }}>
+              <InputLabel>Department</InputLabel>
+              <Select
+                value={formData.departmentId}
+                onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                label="Department"
+              >
+                <MenuItem value="">
+                  <em>No Department</em>
+                </MenuItem>
+                {departments?.map((dept: any) => (
+                  <MenuItem key={dept.id} value={dept.id}>
+                    {dept.name}
                   </MenuItem>
                 ))}
               </Select>

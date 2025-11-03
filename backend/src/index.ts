@@ -14,13 +14,13 @@ import questionRoutes from './routes/questions';
 import assignmentRoutes from './routes/assignments';
 import feedbackRoutes from './routes/feedbacks';
 import reportRoutes from './routes/reports';
+import departmentRoutes from './routes/departments';
 
 // Load environment variables
 dotenv.config();
 
-// Import Prisma client
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+// Import MySQL connection (will connect automatically)
+import './config/database';
 
 const app = express();
 const PORT = process.env.PORT || 5100;
@@ -40,7 +40,12 @@ app.use(helmet());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? ['https://your-frontend-domain.com'] 
-    : ['http://localhost:5200'],
+    : [
+        'http://localhost:5200',
+        /^https:\/\/.*\.ngrok-free\.dev$/,
+        /^https:\/\/.*\.ngrok\.io$/,
+        /^https:\/\/.*\.ngrok\.app$/
+      ],
   credentials: true
 }));
 
@@ -66,9 +71,10 @@ app.use('/api/questions', questionRoutes);
 app.use('/api/assignments', assignmentRoutes);
 app.use('/api/feedbacks', feedbackRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/departments', departmentRoutes);
 
-// Serve static files from React build
-if (process.env.NODE_ENV === 'production') {
+// Serve static files from React build (both production and development for ngrok)
+if (process.env.NODE_ENV === 'production' || process.env.SERVE_FRONTEND === 'true') {
   // Try multiple possible paths for the frontend build
   const possiblePaths = [
     path.join(__dirname, '../../frontend/build'),

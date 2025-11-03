@@ -1,7 +1,25 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 
-  (process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:5100/api');
+// Dynamic API URL detection for ngrok compatibility
+const getApiBaseUrl = () => {
+  if (process.env.REACT_APP_API_URL) {
+    return process.env.REACT_APP_API_URL;
+  }
+  
+  if (process.env.NODE_ENV === 'production') {
+    return '/api';
+  }
+  
+  // Check if we're accessing through ngrok
+  if (window.location.hostname.includes('ngrok')) {
+    // For ngrok, we need to proxy through the same domain
+    return '/api';
+  }
+  
+  return 'http://localhost:5100/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

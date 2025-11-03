@@ -1,6 +1,6 @@
 # 360-Degree Feedback Application
 
-A comprehensive web-based 360-degree feedback system built with React, Node.js, and SQLite. This application allows organizations to conduct multi-source feedback reviews where employees can provide feedback on their colleagues, managers, and themselves.
+A comprehensive web-based 360-degree feedback system built with React, Node.js, and MySQL. This application allows organizations to conduct multi-source feedback reviews where employees can provide feedback on their colleagues, managers, and themselves.
 
 ## ⚡ Quick Start
 
@@ -42,7 +42,7 @@ npm run dev
 
 - **Frontend**: React 18, TypeScript, Material-UI
 - **Backend**: Node.js, Express, TypeScript
-- **Database**: SQLite with Prisma ORM
+- **Database**: MySQL with Prisma ORM
 - **Authentication**: JWT-based with role management
 - **State Management**: React Query for data fetching
 
@@ -51,6 +51,7 @@ npm run dev
 Before you begin, ensure you have the following installed:
 - Node.js (v16 or higher)
 - npm (v8 or higher)
+- MySQL (v8.0 or higher)
 - Git
 
 ## 🔧 Installation
@@ -80,11 +81,37 @@ cd 360-apps
 npm run install-all
 ```
 
-#### 3. Set Up Database
+#### 3. Set Up MySQL Database
+
+**Prerequisites**: Make sure you have MySQL installed and running on your system.
+
+1. **Create a MySQL database**:
+```bash
+mysql -u root -p
+CREATE DATABASE 360_feedback;
+EXIT;
+```
+
+2. **Configure environment variables**:
+Create a `.env` file in the `backend` directory:
 ```bash
 cd backend
+```
+
+Create `.env` with the following content:
+```env
+DATABASE_URL="mysql://root:YOUR_PASSWORD@localhost:3306/360_feedback"
+JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
+PORT=5100
+NODE_ENV="development"
+```
+
+Replace `YOUR_PASSWORD` with your MySQL root password.
+
+3. **Run Prisma migrations**:
+```bash
 npx prisma generate
-npx prisma migrate deploy
+npx prisma migrate dev --name init
 ```
 
 #### 4. Seed the Database
@@ -278,10 +305,29 @@ npm run dev
 ```
 
 #### Database Issues
+
+**MySQL Connection Error:**
+- Ensure MySQL server is running: `sudo systemctl start mysql` (Linux) or start MySQL service (Mac/Windows)
+- Verify database exists: `mysql -u root -p -e "SHOW DATABASES;"`
+- Check connection string in `.env` file matches your MySQL credentials
+
+**Reset Database:**
 ```bash
-# Reset database completely
+# Drop and recreate database (WARNING: This deletes all data)
 cd backend
-npx prisma db push --force-reset
+mysql -u root -p -e "DROP DATABASE IF EXISTS 360_feedback; CREATE DATABASE 360_feedback;"
+
+# Run migrations and seed
+npx prisma migrate deploy
+node scripts/seed.js
+```
+
+**Migration Issues:**
+```bash
+# If migrations fail, reset and start fresh
+cd backend
+npx prisma migrate reset
+npx prisma migrate dev --name init
 node scripts/seed.js
 ```
 
@@ -316,6 +362,17 @@ cd backend && npm run dev
 cd frontend && npm start
 ```
 
+#### ngrok "Invalid Host Header" Error
+When using ngrok to share your app, you might get "Invalid Host header" error:
+```bash
+# Fix: Update frontend package.json start script
+# Change: "start": "PORT=5200 react-scripts start"
+# To: "start": "PORT=5200 DANGEROUSLY_DISABLE_HOST_CHECK=true react-scripts start"
+
+# Then restart the application
+npm run dev
+```
+
 ### Getting Help
 - Check the browser console for error messages
 - Verify both backend and frontend servers are running
@@ -333,7 +390,7 @@ cd frontend && npm start
 │   │   └── config/         # Database configuration
 │   ├── prisma/
 │   │   ├── schema.prisma   # Database schema
-│   │   └── dev.db         # SQLite database
+│   │   └── migrations/     # Database migrations
 │   └── scripts/
 │       └── seed.js        # Database seeding script
 ├── frontend/

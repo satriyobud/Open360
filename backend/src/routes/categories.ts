@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
-import prisma from '../config/database';
+import { query } from '../config/database';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = express.Router();
@@ -8,16 +8,26 @@ const router = express.Router();
 // Get all categories
 router.get('/', authenticateToken, async (req: any, res: any) => {
   try {
-    const categories = await prisma.category.findMany({
-      include: {
-        questions: {
-          select: { id: true, text: true, createdAt: true }
-        }
-      },
-      orderBy: { name: 'asc' }
-    });
+    const categories = await query(
+      'SELECT * FROM categories ORDER BY name ASC'
+    ) as any[];
 
-    res.json(categories);
+    // Get questions for each category
+    const categoriesWithQuestions = await Promise.all(
+      categories.map(async (cat) => {
+        const questions = await query(
+          'SELECT id, text, created_at FROM questions WHERE category_id = ? ORDER BY created_at ASC',
+          [cat.id]
+        ) as any[];
+
+        return {
+          ...cat,
+          questions: questions
+        };
+      })
+    );
+
+    res.json(categoriesWithQuestions);
   } catch (error) {
     console.error('Get categories error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -30,20 +40,25 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
     const { id } = req.params;
     const categoryId = parseInt(id);
 
-    const category = await prisma.category.findUnique({
-      where: { id: categoryId },
-      include: {
-        questions: {
-          orderBy: { createdAt: 'asc' }
-        }
-      }
-    });
+    const categories = await query(
+      'SELECT * FROM categories WHERE id = ?',
+      [categoryId]
+    ) as any[];
 
-    if (!category) {
+    if (categories.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    res.json(category);
+    const category = categories[0];
+    const questions = await query(
+      'SELECT * FROM questions WHERE category_id = ? ORDER BY created_at ASC',
+      [categoryId]
+    ) as any[];
+
+    res.json({
+      ...category,
+      questions: questions
+    });
   } catch (error) {
     console.error('Get category error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -63,14 +78,19 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), [
 
     const { name, description } = req.body;
 
-    const category = await prisma.category.create({
-      data: {
-        name,
-        description: description || null
-      }
-    });
+    const result = await query(
+      `INSERT INTO categories (name, description, created_at, updated_at) 
+       VALUES (?, ?, NOW(), NOW())`,
+      [name, description || null]
+    ) as any;
 
-    res.status(201).json({ message: 'Category created successfully', category });
+    const categoryId = result.insertId;
+    const categories = await query(
+      'SELECT * FROM categories WHERE id = ?',
+      [categoryId]
+    ) as any[];
+
+    res.status(201).json({ message: 'Category created successfully', category: categories[0] });
   } catch (error) {
     console.error('Create category error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -93,23 +113,41 @@ router.put('/:id', authenticateToken, requireRole(['ADMIN']), [
     const { name, description } = req.body;
 
     // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
-      where: { id: categoryId }
-    });
+    const existingCategories = await query(
+      'SELECT id FROM categories WHERE id = ?',
+      [categoryId]
+    ) as any[];
 
-    if (!existingCategory) {
+    if (existingCategories.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
-    const category = await prisma.category.update({
-      where: { id: categoryId },
-      data: {
-        ...(name && { name }),
-        ...(description !== undefined && { description: description || null })
-      }
-    });
+    // Build update query
+    const updates: string[] = [];
+    const params: any[] = [];
 
-    res.json({ message: 'Category updated successfully', category });
+    if (name) {
+      updates.push('name = ?');
+      params.push(name);
+    }
+    if (description !== undefined) {
+      updates.push('description = ?');
+      params.push(description || null);
+    }
+    updates.push('updated_at = NOW()');
+    params.push(categoryId);
+
+    await query(
+      `UPDATE categories SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+
+    const categories = await query(
+      'SELECT * FROM categories WHERE id = ?',
+      [categoryId]
+    ) as any[];
+
+    res.json({ message: 'Category updated successfully', category: categories[0] });
   } catch (error) {
     console.error('Update category error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -123,25 +161,28 @@ router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req: any
     const categoryId = parseInt(id);
 
     // Check if category exists
-    const existingCategory = await prisma.category.findUnique({
-      where: { id: categoryId },
-      include: { questions: true }
-    });
+    const existingCategories = await query(
+      'SELECT id FROM categories WHERE id = ?',
+      [categoryId]
+    ) as any[];
 
-    if (!existingCategory) {
+    if (existingCategories.length === 0) {
       return res.status(404).json({ error: 'Category not found' });
     }
 
     // Check if category has questions
-    if (existingCategory.questions.length > 0) {
+    const questions = await query(
+      'SELECT id FROM questions WHERE category_id = ?',
+      [categoryId]
+    ) as any[];
+
+    if (questions.length > 0) {
       return res.status(400).json({ 
         error: 'Cannot delete category with existing questions. Please delete questions first.' 
       });
     }
 
-    await prisma.category.delete({
-      where: { id: categoryId }
-    });
+    await query('DELETE FROM categories WHERE id = ?', [categoryId]);
 
     res.json({ message: 'Category deleted successfully' });
   } catch (error) {
@@ -151,4 +192,3 @@ router.delete('/:id', authenticateToken, requireRole(['ADMIN']), async (req: any
 });
 
 export default router;
-

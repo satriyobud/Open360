@@ -33,7 +33,27 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      // Navigation will be handled by the AuthContext
+      
+      // Get user role from token for immediate navigation
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          const role = payload.role;
+          
+          // Navigate based on user role
+          if (role === 'ADMIN') {
+            navigate('/admin');
+          } else if (role === 'EMPLOYEE') {
+            navigate('/employee');
+          } else {
+            navigate('/');
+          }
+        } catch {
+          // If decode fails, navigate to root and let App.tsx handle routing
+          navigate('/');
+        }
+      }
     } catch (error: any) {
       setError(error.response?.data?.error || 'Login failed');
     } finally {

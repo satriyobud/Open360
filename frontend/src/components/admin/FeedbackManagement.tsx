@@ -25,6 +25,7 @@ const FeedbackManagement: React.FC = () => {
       field: 'reviewer',
       headerName: 'Reviewer',
       width: 200,
+      valueGetter: (params) => params.row.reviewAssignment?.reviewer,
       renderCell: (params) => (
         <Box display="flex" alignItems="center">
           <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
@@ -38,6 +39,7 @@ const FeedbackManagement: React.FC = () => {
       field: 'reviewee',
       headerName: 'Reviewee',
       width: 200,
+      valueGetter: (params) => params.row.reviewAssignment?.reviewee,
       renderCell: (params) => (
         <Box display="flex" alignItems="center">
           <Avatar sx={{ width: 32, height: 32, mr: 1 }}>
