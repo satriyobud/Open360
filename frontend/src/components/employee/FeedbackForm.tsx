@@ -259,6 +259,37 @@ const FeedbackForm: React.FC = () => {
     }
   };
 
+  // Check if cycle has started
+  const isCycleStarted = () => {
+    if (!assignment?.reviewCycle?.startDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(assignment.reviewCycle.startDate);
+    startDate.setHours(0, 0, 0, 0);
+    return startDate <= today;
+  };
+
+  // Check if cycle has ended
+  const isCycleEnded = () => {
+    if (!assignment?.reviewCycle?.endDate) return false;
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    const endDate = new Date(assignment.reviewCycle.endDate);
+    endDate.setHours(23, 59, 59, 999);
+    return today > endDate;
+  };
+
+  if (isLoading) {
+    return <Box>Loading...</Box>;
+  }
+
+  if (!assignment) {
+    return <Box>Assignment not found</Box>;
+  }
+
+  const cycleStarted = isCycleStarted();
+  const cycleEnded = isCycleEnded();
+
   return (
     <Box>
       <Box display="flex" alignItems="center" mb={3}>
@@ -273,6 +304,32 @@ const FeedbackForm: React.FC = () => {
           Feedback Form
         </Typography>
       </Box>
+
+      {/* Cycle Status Alert */}
+      {!cycleStarted && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="body1" fontWeight="bold">
+            This review cycle has not started yet.
+          </Typography>
+          <Typography variant="body2">
+            Feedback can only be submitted starting from{' '}
+            <strong>{new Date(assignment.reviewCycle.startDate).toLocaleDateString()}</strong>.
+          </Typography>
+        </Alert>
+      )}
+
+      {cycleEnded && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="body1" fontWeight="bold">
+            This review cycle has ended.
+          </Typography>
+          <Typography variant="body2">
+            The cycle ended on{' '}
+            <strong>{new Date(assignment.reviewCycle.endDate).toLocaleDateString()}</strong>.
+            Feedback submission is no longer available.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Assignment Info */}
       <Paper sx={{ p: 2, mb: 3 }}>
@@ -335,11 +392,12 @@ const FeedbackForm: React.FC = () => {
                   alignItems="center" 
                   gap={0.5}
                   sx={{ 
-                    cursor: 'pointer',
-                    '&:hover .star': {
+                    cursor: cycleStarted && !cycleEnded ? 'pointer' : 'not-allowed',
+                    opacity: cycleStarted && !cycleEnded ? 1 : 0.5,
+                    '&:hover .star': cycleStarted && !cycleEnded ? {
                       transform: 'scale(1.1)',
                       transition: 'transform 0.2s ease'
-                    }
+                    } : {}
                   }}
                 >
                   {[1, 2, 3, 4, 5].map((star) => {
@@ -348,13 +406,17 @@ const FeedbackForm: React.FC = () => {
                       <Box
                         key={star}
                         className="star"
-                        onClick={() => handleScoreChange(question.id, star)}
-                        sx={{
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            transform: 'scale(1.2)'
+                        onClick={() => {
+                          if (cycleStarted && !cycleEnded) {
+                            handleScoreChange(question.id, star);
                           }
+                        }}
+                        sx={{
+                          cursor: cycleStarted && !cycleEnded ? 'pointer' : 'not-allowed',
+                          transition: 'all 0.2s ease',
+                          '&:hover': cycleStarted && !cycleEnded ? {
+                            transform: 'scale(1.2)'
+                          } : {}
                         }}
                       >
                         {isSelected ? (
@@ -413,8 +475,13 @@ const FeedbackForm: React.FC = () => {
                 rows={2}
                 label="Additional Comments (Optional)"
                 value={feedbackData[question.id]?.comment || ''}
-                onChange={(e) => handleCommentChange(question.id, e.target.value)}
+                onChange={(e) => {
+                  if (cycleStarted && !cycleEnded) {
+                    handleCommentChange(question.id, e.target.value);
+                  }
+                }}
                 placeholder="Provide specific examples or additional feedback..."
+                disabled={!cycleStarted || cycleEnded}
               />
 
               {index < currentCategoryQuestions.length - 1 && <Divider sx={{ mt: 2 }} />}
@@ -436,7 +503,7 @@ const FeedbackForm: React.FC = () => {
         <Button
           variant="contained"
           onClick={activeStep === categories.length - 1 ? handleSubmitAll : handleNextCategory}
-          disabled={!isCurrentCategoryComplete() || submitMutation.isLoading}
+          disabled={!isCurrentCategoryComplete() || submitMutation.isLoading || !cycleStarted || cycleEnded}
           endIcon={<ArrowForward />}
         >
           {activeStep === categories.length - 1 ? 'Submit All' : 'Next Category'}

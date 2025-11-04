@@ -25,14 +25,43 @@ router.post('/', authenticateToken, [
 
     const { reviewAssignmentId, questionId, score, comment } = req.body;
 
-    // Check if assignment exists and user is the reviewer
+    // Check if assignment exists, user is the reviewer, and cycle has started
     const assignments = await query(
-      'SELECT id, reviewer_id FROM review_assignments WHERE id = ? AND reviewer_id = ?',
+      `SELECT ra.id, ra.reviewer_id, rc.start_date, rc.end_date
+       FROM review_assignments ra
+       JOIN review_cycles rc ON ra.review_cycle_id = rc.id
+       WHERE ra.id = ? AND ra.reviewer_id = ?`,
       [reviewAssignmentId, req.user.id]
     ) as any[];
 
     if (assignments.length === 0) {
       return res.status(404).json({ error: 'Assignment not found or you are not authorized to provide feedback' });
+    }
+
+    const assignment = assignments[0];
+    
+    // Check if cycle has started (start_date <= today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(assignment.start_date);
+    startDate.setHours(0, 0, 0, 0);
+    
+    if (startDate > today) {
+      return res.status(400).json({ 
+        error: 'This review cycle has not started yet. Feedback can only be submitted starting from the cycle start date.',
+        startDate: assignment.start_date
+      });
+    }
+
+    // Check if cycle has ended (optional - you might want to allow updates after end date)
+    const endDate = new Date(assignment.end_date);
+    endDate.setHours(23, 59, 59, 999);
+    
+    if (today > endDate) {
+      return res.status(400).json({ 
+        error: 'This review cycle has ended. Feedback submission is no longer available.',
+        endDate: assignment.end_date
+      });
     }
 
     // Check if question exists
@@ -341,11 +370,12 @@ router.put('/:id', authenticateToken, [
     const feedbackId = parseInt(id);
     const { score, comment } = req.body;
 
-    // Get feedback with assignment info
+    // Get feedback with assignment and cycle info
     const feedbacks = await query(
-      `SELECT f.*, ra.reviewer_id
+      `SELECT f.*, ra.reviewer_id, rc.start_date, rc.end_date
        FROM feedbacks f
        JOIN review_assignments ra ON f.review_assignment_id = ra.id
+       JOIN review_cycles rc ON ra.review_cycle_id = rc.id
        WHERE f.id = ?`,
       [feedbackId]
     ) as any[];
@@ -359,6 +389,30 @@ router.put('/:id', authenticateToken, [
     // Check if user is authorized to update this feedback
     if (req.user.role !== 'ADMIN' && feedback.reviewer_id !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to update this feedback' });
+    }
+
+    // Check if cycle has started (start_date <= today)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(feedback.start_date);
+    startDate.setHours(0, 0, 0, 0);
+    
+    if (startDate > today) {
+      return res.status(400).json({ 
+        error: 'This review cycle has not started yet. Feedback can only be updated starting from the cycle start date.',
+        startDate: feedback.start_date
+      });
+    }
+
+    // Check if cycle has ended
+    const endDate = new Date(feedback.end_date);
+    endDate.setHours(23, 59, 59, 999);
+    
+    if (today > endDate) {
+      return res.status(400).json({ 
+        error: 'This review cycle has ended. Feedback updates are no longer available.',
+        endDate: feedback.end_date
+      });
     }
 
     await query(
