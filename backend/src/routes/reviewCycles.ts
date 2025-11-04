@@ -137,6 +137,126 @@ router.get('/:id', authenticateToken, async (req: any, res: any) => {
   }
 });
 
+// Preview assignments without creating cycle (Admin only)
+router.post('/preview', authenticateToken, requireRole(['ADMIN']), [
+  body('startDate').isISO8601().withMessage('Valid start date is required'),
+  body('endDate').isISO8601().withMessage('Valid end date is required'),
+  body('config').optional().isObject().withMessage('Config must be an object'),
+], async (req: any, res: any) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { startDate, endDate, config } = req.body;
+
+    // Default config if not provided
+    const assignmentConfig = config || {
+      self: true,
+      manager: true,
+      subordinate: true,
+      peer: true
+    };
+
+    // Generate preview assignments (same logic as create, but don't save)
+    const previewAssignments: any[] = [];
+
+    // Get all employees (non-admin users) with their details
+    const employees = await query(
+      `SELECT id, name, email, manager_id FROM users WHERE role = 'EMPLOYEE'`
+    ) as any[];
+
+    for (const employee of employees) {
+      // Self-review
+      if (assignmentConfig.self) {
+        previewAssignments.push({
+          reviewerId: employee.id,
+          reviewerName: employee.name,
+          reviewerEmail: employee.email,
+          revieweeId: employee.id,
+          revieweeName: employee.name,
+          revieweeEmail: employee.email,
+          relationType: 'SELF',
+          enabled: true
+        });
+      }
+
+      // Manager review
+      if (assignmentConfig.manager && employee.manager_id) {
+        const managerRows = await query(
+          `SELECT id, name, email FROM users WHERE id = ? AND role = 'EMPLOYEE'`,
+          [employee.manager_id]
+        ) as any[];
+
+        if (managerRows.length > 0) {
+          const manager = managerRows[0];
+          previewAssignments.push({
+            reviewerId: manager.id,
+            reviewerName: manager.name,
+            reviewerEmail: manager.email,
+            revieweeId: employee.id,
+            revieweeName: employee.name,
+            revieweeEmail: employee.email,
+            relationType: 'MANAGER',
+            enabled: true
+          });
+        }
+      }
+
+      // Subordinate reviews
+      if (assignmentConfig.subordinate) {
+        const subordinates = await query(
+          `SELECT id, name, email FROM users WHERE manager_id = ? AND role = 'EMPLOYEE'`,
+          [employee.id]
+        ) as any[];
+
+        for (const subordinate of subordinates) {
+          previewAssignments.push({
+            reviewerId: subordinate.id,
+            reviewerName: subordinate.name,
+            reviewerEmail: subordinate.email,
+            revieweeId: employee.id,
+            revieweeName: employee.name,
+            revieweeEmail: employee.email,
+            relationType: 'SUBORDINATE',
+            enabled: true
+          });
+        }
+      }
+
+      // Peer reviews
+      if (assignmentConfig.peer && employee.manager_id) {
+        const peers = await query(
+          `SELECT id, name, email FROM users WHERE manager_id = ? AND id != ? AND role = ?`,
+          [employee.manager_id, employee.id, 'EMPLOYEE']
+        ) as any[];
+
+        for (const peer of peers) {
+          previewAssignments.push({
+            reviewerId: peer.id,
+            reviewerName: peer.name,
+            reviewerEmail: peer.email,
+            revieweeId: employee.id,
+            revieweeName: employee.name,
+            revieweeEmail: employee.email,
+            relationType: 'PEER',
+            enabled: true
+          });
+        }
+      }
+    }
+
+    res.json({
+      previewAssignments,
+      totalCount: previewAssignments.length
+    });
+  } catch (error) {
+    console.error('Preview assignments error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Create review cycle with auto-assignment (Admin only)
 router.post('/', authenticateToken, requireRole(['ADMIN']), [
   body('name').notEmpty().withMessage('Name is required'),
@@ -146,7 +266,8 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), [
   body('config.self').optional().isBoolean().withMessage('Self must be a boolean'),
   body('config.manager').optional().isBoolean().withMessage('Manager must be a boolean'),
   body('config.subordinate').optional().isBoolean().withMessage('Subordinate must be a boolean'),
-  body('config.peer').optional().isBoolean().withMessage('Peer must be a boolean')
+  body('config.peer').optional().isBoolean().withMessage('Peer must be a boolean'),
+  body('assignments').optional().isArray().withMessage('Assignments must be an array')
 ], async (req: any, res: any) => {
   try {
     const errors = validationResult(req);
@@ -154,7 +275,7 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { name, startDate, endDate, config } = req.body;
+    const { name, startDate, endDate, config, assignments } = req.body;
 
     // Validate date range
     const start = new Date(startDate);
@@ -186,13 +307,35 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), [
 
     const cycleId = result.insertId;
 
-    // Auto-assignment logic
     let assignmentsCreated = 0;
 
-    // Get all employees (non-admin users)
-    const employees = await query(
-      "SELECT id, manager_id FROM users WHERE role = 'EMPLOYEE'"
-    ) as any[];
+    // If assignments array is provided, use those (selected from preview)
+    if (assignments && Array.isArray(assignments) && assignments.length > 0) {
+      for (const assignment of assignments) {
+        // Only create if enabled (default true)
+        if (assignment.enabled !== false) {
+          // Check for duplicates
+          const existing = await query(
+            'SELECT id FROM review_assignments WHERE review_cycle_id = ? AND reviewer_id = ? AND reviewee_id = ? AND relation_type = ?',
+            [cycleId, assignment.reviewerId, assignment.revieweeId, assignment.relationType]
+          ) as any[];
+
+          if (existing.length === 0) {
+            await query(
+              `INSERT INTO review_assignments (review_cycle_id, reviewer_id, reviewee_id, relation_type, created_at, updated_at) 
+               VALUES (?, ?, ?, ?, NOW(), NOW())`,
+              [cycleId, assignment.reviewerId, assignment.revieweeId, assignment.relationType]
+            );
+            assignmentsCreated++;
+          }
+        }
+      }
+    } else {
+      // Otherwise, use auto-assignment logic
+      // Get all employees (non-admin users)
+      const employees = await query(
+        "SELECT id, manager_id FROM users WHERE role = 'EMPLOYEE'"
+      ) as any[];
 
     for (const employee of employees) {
       // Self-review
