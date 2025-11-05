@@ -39,12 +39,15 @@ app.use(helmet());
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend-domain.com'] 
+    ? (process.env.FRONTEND_URL 
+        ? [process.env.FRONTEND_URL] 
+        : ['https://your-frontend-domain.com'])
     : [
         'http://localhost:5200',
         /^https:\/\/.*\.ngrok-free\.dev$/,
         /^https:\/\/.*\.ngrok\.io$/,
-        /^https:\/\/.*\.ngrok\.app$/
+        /^https:\/\/.*\.ngrok\.app$/,
+        /^https:\/\/.*\.onrender\.com$/
       ],
   credentials: true
 }));
@@ -150,7 +153,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API base URL: http://localhost:${PORT}/api`);
