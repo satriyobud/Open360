@@ -1,21 +1,24 @@
 import axios from 'axios';
 
-// Dynamic API URL detection for ngrok compatibility
+// Dynamic API URL detection for ngrok and Railway compatibility
 const getApiBaseUrl = () => {
+  // Use explicit API URL if set (for separate frontend/backend deployments)
   if (process.env.REACT_APP_API_URL) {
     return process.env.REACT_APP_API_URL;
   }
   
+  // In production, use relative path (works when frontend is served from backend)
   if (process.env.NODE_ENV === 'production') {
     return '/api';
   }
   
-  // Check if we're accessing through ngrok
-  if (window.location.hostname.includes('ngrok')) {
-    // For ngrok, we need to proxy through the same domain
+  // Check if we're accessing through ngrok or railway (same domain)
+  if (window.location.hostname.includes('ngrok') || window.location.hostname.includes('railway.app')) {
+    // For ngrok/railway, use relative path if served from same domain
     return '/api';
   }
   
+  // Development fallback
   return 'http://localhost:5100/api';
 };
 

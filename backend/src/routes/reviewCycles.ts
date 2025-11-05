@@ -337,7 +337,7 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), [
         "SELECT id, manager_id FROM users WHERE role = 'EMPLOYEE'"
       ) as any[];
 
-    for (const employee of employees) {
+      for (const employee of employees) {
       // Self-review
       if (assignmentConfig.self) {
         const existing = await query(
@@ -426,6 +426,7 @@ router.post('/', authenticateToken, requireRole(['ADMIN']), [
           }
         }
       }
+    }
     }
 
     // Fetch created cycle
