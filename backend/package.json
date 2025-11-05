@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "PORT=5100 nodemon src/index.ts",
     "build": "tsc --skipLibCheck",
-    "start": "node dist/index.js",
+    "start": "PORT=5100 node dist/index.js",
     "migrate": "npx prisma migrate dev",
     "generate": "npx prisma generate",
     "studio": "npx prisma studio"
