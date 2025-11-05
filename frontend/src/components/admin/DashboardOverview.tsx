@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   Typography,
-  Paper,
   List,
   ListItem,
   ListItemText,
@@ -19,8 +18,7 @@ import {
   Feedback,
   TrendingUp,
   Assignment,
-  CheckCircle,
-  Pending
+  CheckCircle
 } from '@mui/icons-material';
 import { useQuery } from 'react-query';
 import { api } from '../../services/api.ts';

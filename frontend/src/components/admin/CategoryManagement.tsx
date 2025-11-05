@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  IconButton,
   Chip
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';

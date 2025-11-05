@@ -23,9 +23,7 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  LineChart,
-  Line
+  Cell
 } from 'recharts';
 import { useQuery } from 'react-query';
 import { api } from '../../services/api.ts';

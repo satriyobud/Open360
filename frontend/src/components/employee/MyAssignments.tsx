@@ -8,7 +8,6 @@ import {
   Chip,
   Button,
   Avatar,
-  Divider,
   Alert
 } from '@mui/material';
 import {
@@ -32,10 +31,6 @@ const MyAssignments: React.FC = () => {
   const getStatus = (assignment: any) => {
     const hasFeedback = assignment.feedbacks && assignment.feedbacks.length > 0;
     return hasFeedback ? 'completed' : 'pending';
-  };
-
-  const getStatusColor = (status: string) => {
-    return status === 'completed' ? 'success' : 'warning';
   };
 
   const getRelationTypeColor = (type: string) => {

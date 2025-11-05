@@ -6,7 +6,7 @@ import { api } from '../../services/api.ts';
 const FeedbackSummaries: React.FC = () => {
   const [selectedPair, setSelectedPair] = useState<any | null>(null);
 
-  const { data: pairs = [], isLoading } = useQuery('report-pairs', async () => {
+  const { data: pairs = [] } = useQuery('report-pairs', async () => {
     const res = await api.get('/reports/pairs');
     return res.data as any[];
   });

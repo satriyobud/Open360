@@ -6,8 +6,7 @@ import {
   Card,
   CardContent,
   Grid,
-  Avatar,
-  Divider
+  Avatar
 } from '@mui/material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useQuery } from 'react-query';

@@ -11,7 +11,6 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
-  Avatar,
   Menu,
   MenuItem,
   Divider

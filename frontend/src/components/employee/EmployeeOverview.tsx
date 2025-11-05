@@ -17,8 +17,7 @@ import {
   Assignment,
   Feedback,
   CheckCircle,
-  Pending,
-  Person
+  Pending
 } from '@mui/icons-material';
 import { useQuery } from 'react-query';
 import { api } from '../../services/api.ts';
