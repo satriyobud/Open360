@@ -1,6 +1,13 @@
-# 360-Degree Feedback Application
+# Open360
 
-A comprehensive web-based 360-degree feedback system built with React, Node.js, and MySQL. This application allows organizations to conduct multi-source feedback reviews where employees can provide feedback on their colleagues, managers, and themselves.
+An open-source comprehensive web-based 360-degree feedback system built with React, Node.js, and MySQL. Open360 allows organizations to conduct multi-source feedback reviews where employees can provide feedback on their colleagues, managers, and themselves.
+
+> 📘 For detailed documentation, see the [Documentation](./docs/) folder:
+> - [Getting Started](./docs/Getting-Started.md)
+> - [Installation Guide](./docs/Installation-Guide.md)
+> - [API Reference](./docs/API-Reference.md)
+> - [Contributing](./docs/Contributing.md)
+> - [Troubleshooting](./docs/Troubleshooting.md)
 
 ## ⚡ Quick Start
 
@@ -10,10 +17,14 @@ git clone <repository-url>
 cd 360-apps
 chmod +x setup.sh && ./setup.sh
 
-# 2. Run the application
+# 2. Configure environment
+cp backend/.env.example backend/.env
+# Edit backend/.env with your database credentials
+
+# 3. Run the application
 npm run dev
 
-# 3. Access the app
+# 4. Access the app
 # Frontend: http://localhost:5200
 # Backend: http://localhost:5100
 # Login: admin@company.com / admin123
@@ -25,11 +36,13 @@ npm run dev
 
 ### Admin Features
 - **Dashboard Overview** - Real-time statistics and progress tracking
-- **Employee Management** - Add, edit, and manage employee accounts
-- **Review Cycle Management** - Create and manage feedback cycles
+- **Employee Management** - Add, edit, and manage employee accounts with departments
+- **Department Management** - Create and manage organizational departments
+- **Review Cycle Management** - Create cycles with configurable auto-assignment (Self, Manager, Subordinate, Peer)
 - **Category & Question Management** - Customize feedback categories and questions
 - **Assignment Management** - Assign reviewers to reviewees
 - **Feedback Management** - Monitor and review submitted feedback
+- **Feedback Summaries** - Reviewer → Reviewee pairs with category breakdowns
 - **Reports Dashboard** - Comprehensive analytics and reporting
 
 ### Employee Features
@@ -42,14 +55,14 @@ npm run dev
 
 - **Frontend**: React 18, TypeScript, Material-UI
 - **Backend**: Node.js, Express, TypeScript
-- **Database**: MySQL with Prisma ORM
+- **Database**: MySQL (raw queries, no ORM)
 - **Authentication**: JWT-based with role management
 - **State Management**: React Query for data fetching
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
-- Node.js (v16 or higher)
+- Node.js (v18 or higher)
 - npm (v8 or higher)
 - MySQL (v8.0 or higher)
 - Git
@@ -62,7 +75,7 @@ Before you begin, ensure you have the following installed:
 git clone <repository-url>
 cd 360-apps
 
-# Run the setup script (installs all dependencies and seeds database)
+# Run the setup script (installs all dependencies)
 chmod +x setup.sh
 ./setup.sh
 ```
@@ -93,29 +106,41 @@ EXIT;
 ```
 
 2. **Configure environment variables**:
-Create a `.env` file in the `backend` directory:
+Copy the example environment file:
+```bash
+cp backend/.env.example backend/.env
+```
+
+Edit `backend/.env` with your database credentials:
+
+**Option 1: Using DATABASE_URL (Recommended)**
+```env
+NODE_ENV=development
+PORT=5100
+SERVE_FRONTEND=false
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+DATABASE_URL=mysql://root@127.0.0.1:3306/360_feedback
+```
+
+**Option 2: Using individual database variables**
+```env
+NODE_ENV=development
+PORT=5100
+SERVE_FRONTEND=false
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USERNAME=root
+DB_PASSWORD=
+DB_DATABASE=360_feedback
+```
+
+3. **Create database tables**:
+The tables are created automatically when you start the server, or you can create them manually using the SQL schema.
+
+4. **Seed the Database**:
 ```bash
 cd backend
-```
-
-Create `.env` with the following content:
-```env
-DATABASE_URL="mysql://root:YOUR_PASSWORD@localhost:3306/360_feedback"
-JWT_SECRET="your-super-secret-jwt-key-change-this-in-production"
-PORT=5100
-NODE_ENV="development"
-```
-
-Replace `YOUR_PASSWORD` with your MySQL root password.
-
-3. **Run Prisma migrations**:
-```bash
-npx prisma generate
-npx prisma migrate dev --name init
-```
-
-#### 4. Seed the Database
-```bash
 node scripts/seed.js
 ```
 
@@ -155,20 +180,11 @@ If you encounter "address already in use" errors, kill existing processes:
 
 ```bash
 # Kill processes on ports 5100 and 5200
-lsof -ti:5100 | xargs kill -9
-lsof -ti:5200 | xargs kill -9
+lsof -ti:5100 | xargs kill -9 2>/dev/null || true
+lsof -ti:5200 | xargs kill -9 2>/dev/null || true
 
 # Then restart the application
 npm run dev
-```
-
-### One-Command Setup and Run
-
-For a completely fresh setup:
-
-```bash
-# Install all dependencies and start the application
-npm run install-all && npm run dev
 ```
 
 ## 👥 Default User Accounts
@@ -178,13 +194,15 @@ npm run install-all && npm run dev
 - **Password**: `admin123`
 - **Role**: Admin/HR
 
-### Employee Accounts
-- **Email**: `employee@company.com` (John Employee)
-- **Password**: `employee123`
-- **Email**: `jane@company.com` (Jane Smith)
-- **Password**: `employee123`
-- **Email**: `bob@company.com` (Bob Johnson)
-- **Password**: `employee123`
+### Demo Employee Accounts (from assignment-simulation.md)
+- **Email**: `alice@example.com` (Alice Johnson - CEO)
+- **Email**: `bob@example.com` (Bob Smith - Engineering Manager)
+- **Email**: `carol@example.com` (Carol Lee - Design Manager)
+- **Email**: `david@example.com` (David Kim - Senior Engineer)
+- **Email**: `eve@example.com` (Eve Tan - Engineer)
+- **Email**: `frank@example.com` (Frank Zhao - Senior Designer)
+- **Email**: `grace@example.com` (Grace Liu - Designer)
+- **Password**: `password123` (for all demo accounts)
 
 ## 📝 How to Use the Application
 
@@ -195,29 +213,38 @@ npm run install-all && npm run dev
 - Login with admin credentials
 - Access the admin dashboard
 
-#### 2. Create Review Cycles
-- Go to "Review Cycles" in the sidebar
-- Click "Create New Cycle"
-- Set cycle name, start date, and end date
-- Save the cycle
+#### 2. Manage Departments
+- Go to "Departments" in the sidebar
+- Create departments (e.g., Executive, Engineering, Design)
+- Assign employees to departments (optional)
 
 #### 3. Manage Employees
 - Go to "Employee Management"
 - Add new employees or edit existing ones
-- Set employee roles and details
+- Set employee manager and department
+- **Note**: Manager must be an EMPLOYEE (not ADMIN)
+- **Note**: Admins don't require department assignment
 
 #### 4. Create Feedback Categories and Questions
-- Go to "Categories" to create feedback categories (e.g., Leadership, Communication)
+- Go to "Categories" to create feedback categories (e.g., Leadership, Communication, Teamwork, Problem Solving)
 - Go to "Questions" to add questions for each category
 - Questions use a 1-5 star rating system
 
-#### 5. Assign Reviewers
-- Go to "Assignments"
-- Create assignments by selecting:
-  - Review cycle
-  - Reviewer (who will give feedback)
-  - Reviewee (who will receive feedback)
-  - Relationship type (SELF, MANAGER, PEER, DIRECT_REPORT)
+#### 5. Start Review Cycles with Auto-Assignment
+- Go to "Review Cycles" in the sidebar
+- Click "Start New Cycle"
+- Set cycle name, start date, and end date
+- **Select review types** to auto-generate:
+  - ✅ Self Review
+  - ✅ Manager Review
+  - ✅ Subordinate Review
+  - ✅ Peer Review
+- The system automatically creates assignments based on organizational hierarchy
+
+#### 6. View Feedback Summaries
+- Go to "Summaries" in the sidebar
+- View all reviewer → reviewee pairs with overall averages
+- Click any card to see category breakdown
 
 ### For Employees
 
@@ -261,20 +288,19 @@ npm run install-all && npm run dev
 ### Comments System
 - **Optional Comments**: Add detailed feedback for each question
 - **Rich Text**: Multi-line text input for comprehensive feedback
-- **Character Limits**: Reasonable limits to encourage concise feedback
 
 ## 📊 Reporting and Analytics
 
 ### Admin Reports
+- **Dashboard**: Overall statistics, completion rates, average scores
+- **Summaries**: Reviewer → Reviewee pairs with category breakdowns
 - **Completion Rates**: Track assignment completion percentages
 - **Average Scores**: View aggregated feedback scores by category
 - **Response Analysis**: Detailed breakdown of feedback responses
-- **Trend Analysis**: Historical data and progress tracking
 
 ### Employee Insights
 - **Personal Progress**: Individual completion tracking
 - **Assignment History**: View all completed feedback tasks
-- **Performance Metrics**: Access to own feedback scores (when available)
 
 ## 🔒 Security Features
 
@@ -283,6 +309,7 @@ npm run install-all && npm run dev
 - **Assignment Authorization**: Users can only access their assigned feedback
 - **Input Validation**: Server-side validation for all form inputs
 - **CORS Protection**: Configured for secure cross-origin requests
+- **Password Hashing**: bcrypt with salt rounds
 
 ## 🐛 Troubleshooting
 
@@ -293,8 +320,8 @@ This is the most common issue when starting the application:
 
 ```bash
 # Kill processes on ports 5100 and 5200
-lsof -ti:5100 | xargs kill -9
-lsof -ti:5200 | xargs kill -9
+lsof -ti:5100 | xargs kill -9 2>/dev/null || true
+lsof -ti:5200 | xargs kill -9 2>/dev/null || true
 
 # Alternative: Find and kill specific processes
 ps aux | grep node
@@ -307,28 +334,40 @@ npm run dev
 #### Database Issues
 
 **MySQL Connection Error:**
-- Ensure MySQL server is running: `sudo systemctl start mysql` (Linux) or start MySQL service (Mac/Windows)
+- Ensure MySQL server is running:
+  - **Linux**: `sudo systemctl start mysql`
+  - **Mac**: `brew services start mysql` or start MySQL service
+  - **Windows**: Start MySQL service from Services
 - Verify database exists: `mysql -u root -p -e "SHOW DATABASES;"`
-- Check connection string in `.env` file matches your MySQL credentials
+- Check connection string in `backend/.env` file matches your MySQL credentials
+
+**Create Database Tables:**
+The tables are created automatically on first run, but you can verify:
+```bash
+mysql -u root -p 360_feedback -e "SHOW TABLES;"
+```
 
 **Reset Database:**
 ```bash
 # Drop and recreate database (WARNING: This deletes all data)
-cd backend
 mysql -u root -p -e "DROP DATABASE IF EXISTS 360_feedback; CREATE DATABASE 360_feedback;"
 
-# Run migrations and seed
-npx prisma migrate deploy
-node scripts/seed.js
+# Tables will be created automatically when server starts
+# Or seed with: cd backend && node scripts/seed.js
 ```
 
-**Migration Issues:**
+**Reset Users (Keep Admins, Questions, Categories, Departments):**
 ```bash
-# If migrations fail, reset and start fresh
-cd backend
-npx prisma migrate reset
-npx prisma migrate dev --name init
-node scripts/seed.js
+# Use the API endpoint
+curl -X POST http://localhost:5100/api/employees/reset \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+**Reset Cycles (Keep Questions):**
+```bash
+# Use the API endpoint
+curl -X POST http://localhost:5100/api/review-cycles/reset \
+  -H "Authorization: Bearer <admin-token>"
 ```
 
 #### Frontend Build Issues
@@ -342,10 +381,14 @@ npm install
 #### Backend Won't Start
 ```bash
 # Check if database exists and is accessible
+mysql -u root -p -e "USE 360_feedback; SELECT 1;"
+
+# Verify environment variables
 cd backend
-npx prisma generate
-npx prisma db push
-node scripts/seed.js
+cat .env
+
+# Check for TypeScript compilation errors
+npm run build
 ```
 
 #### Concurrently Issues
@@ -362,22 +405,12 @@ cd backend && npm run dev
 cd frontend && npm start
 ```
 
-#### ngrok "Invalid Host Header" Error
-When using ngrok to share your app, you might get "Invalid Host header" error:
-```bash
-# Fix: Update frontend package.json start script
-# Change: "start": "PORT=5200 react-scripts start"
-# To: "start": "PORT=5200 DANGEROUSLY_DISABLE_HOST_CHECK=true react-scripts start"
-
-# Then restart the application
-npm run dev
-```
-
 ### Getting Help
 - Check the browser console for error messages
 - Verify both backend and frontend servers are running
-- Ensure database is properly seeded with sample data
+- Ensure database is properly configured
 - Check network connectivity between frontend and backend
+- Review [TECHNICAL_BLUEPRINT.md](./TECHNICAL_BLUEPRINT.md) for technical details
 
 ## 📁 Project Structure
 
@@ -388,20 +421,46 @@ npm run dev
 │   │   ├── routes/          # API endpoints
 │   │   ├── middleware/      # Authentication & validation
 │   │   └── config/         # Database configuration
-│   ├── prisma/
-│   │   ├── schema.prisma   # Database schema
-│   │   └── migrations/     # Database migrations
-│   └── scripts/
-│       └── seed.js        # Database seeding script
+│   ├── scripts/
+│   │   ├── seed.js         # Database seeding script
+│   │   └── reset-feedback.js # Reset script
+│   ├── .env.example        # Example environment variables
+│   └── package.json
 ├── frontend/
 │   ├── src/
 │   │   ├── components/     # React components
+│   │   │   ├── admin/     # Admin components
+│   │   │   └── employee/  # Employee components
 │   │   ├── pages/         # Main page components
 │   │   ├── services/      # API service layer
 │   │   └── contexts/      # React contexts
 │   └── public/            # Static assets
-└── README.md
+├── TECHNICAL_BLUEPRINT.md # Technical documentation with ERD
+├── assignment-simulation.md # Demo organization structure
+├── auto-assign.md         # Auto-assignment feature spec
+├── .env.example           # Root environment example
+└── README.md              # This file
 ```
+
+## 🔄 Data Management
+
+### Reset Functions
+
+**Reset All Non-Admin Users:**
+- Deletes all employees and their related data (feedbacks, assignments, cycles)
+- Preserves: Admins, Questions, Categories, Departments
+- Endpoint: `POST /api/employees/reset` (Admin only)
+
+**Reset All Cycles and Assignments:**
+- Deletes all cycles, assignments, and feedbacks
+- Preserves: Questions, Categories, Departments, Users
+- Endpoint: `POST /api/review-cycles/reset` (Admin only)
+
+## 📚 Additional Documentation
+
+- **[TECHNICAL_BLUEPRINT.md](./TECHNICAL_BLUEPRINT.md)** - Complete technical documentation including ERD, API endpoints, and architecture
+- **[assignment-simulation.md](./assignment-simulation.md)** - Demo organization structure and simulation data
+- **[auto-assign.md](./auto-assign.md)** - Auto-assignment feature specification
 
 ## 🤝 Contributing
 
@@ -413,14 +472,29 @@ npm run dev
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## 🌟 Open Source
+
+Open360 is an open-source project. Contributions, issues, and feature requests are welcome!
+
+### Contributing
+
+We welcome contributions from the community! Please see our contributing guidelines:
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Test thoroughly
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
 ## 🆘 Support
 
 For support and questions:
 - Create an issue in the repository
 - Check the troubleshooting section above
-- Review the code documentation
+- Review the [TECHNICAL_BLUEPRINT.md](./TECHNICAL_BLUEPRINT.md) for technical details
 
 ---
 

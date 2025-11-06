@@ -158,7 +158,7 @@ const Login: React.FC = () => {
                 Admin: admin@company.com / admin123
               </Typography>
               <Typography variant="body2" color="text.secondary" align="center">
-                Employee: employee@company.com / employee123
+                Employee: alice@example.com / password123
               </Typography>
             </Box>
           </CardContent>

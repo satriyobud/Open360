@@ -25,8 +25,26 @@ import './config/database';
 const app = express();
 const PORT = parseInt(process.env.PORT || '5100', 10);
 
+// Force HTTPS in production (Railway handles SSL termination)
+if (process.env.NODE_ENV === 'production') {
+  app.use((req, res, next) => {
+    // Check if request is secure (Railway sets this header)
+    if (req.headers['x-forwarded-proto'] === 'http') {
+      return res.redirect(301, `https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
+
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for now (can be configured later)
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  }
+}));
 
 // Rate limiting - DISABLED FOR DEVELOPMENT
 // const limiter = rateLimit({
